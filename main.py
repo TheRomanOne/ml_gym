@@ -12,7 +12,7 @@ class World(ShowBase):
         ShowBase.__init__(self)
         self.setBackgroundColor(0.4, .7, .8, 1)
         self.camera = base.cam
-        self.camera.setPos(0, -50, 10)
+        self.camera.setPos(0, -70, 10)
         self.camera.lookAt(0, 0, 0)
 
         # World
@@ -27,24 +27,35 @@ class World(ShowBase):
         }
 
         self.Character = Character(render, loader, self.world)
-        self.add_lighting()
+        self.player = None
         self.add_plane()
         self.init_models()
-
+        self.setup_keys()
+        self.add_lighting()
+    
+    def setup_keys(self):
         f = 100
-        buttons = {'x': ['r', 'f'], 'y': ['e', 'd'], 'z': ['t', 'g'] }
+        
+        self.accept('arrow_up', self.set_body_movement, [2, -f])
+        self.accept('arrow_up-up', self.set_body_movement, [2, 0])
 
-        for i, key in enumerate(buttons.keys()):
-            for j, k in enumerate(buttons[key]):
-                self.accept(k, self.set_body_rotation, [i, f * (1 if j % 2 == 0 else -1)])
-                self.accept(f'{k}-up', self.set_body_rotation, [i, 0])
-
+        self.accept('arrow_left', self.set_body_rotation, [0, f])
+        self.accept('arrow_left-up', self.set_body_rotation, [0, 0])
+        self.accept('arrow_right', self.set_body_rotation, [0, -f])
+        self.accept('arrow_right-up', self.set_body_rotation, [0, 0])
 
     def set_body_rotation(self, axis, value):
         self.status['rotation'][axis] = value
 
-    def apply_force(self, body, force):
-        body.applyCentralForce(force)
+    def set_body_movement(self, axis, value):
+        self.status['movement'][axis] = value
+
+    def affect(self, a_type, np, value):
+        if a_type == 'rotation':
+            np.node().applyTorque(Vec3(*value))
+        elif a_type == 'movement':
+            np.node().applyCentralForce(Vec3(*value))
+
 
     def apply_drag(self, body):
         fluid_density = .1225  # Density of air at sea level in kg/m^3
@@ -55,8 +66,6 @@ class World(ShowBase):
         drag_force = velocity.normalized() * drag_force_magnitude
         body.applyCentralForce(drag_force)
 
-    def apply_torque(self, np, torque):
-        np.node().applyTorque(Vec3(*torque))
 
     def rotate_body(self, body, angles):
         current_hpr = body.getHpr()  # Get current HPR (heading, pitch, roll)
@@ -66,40 +75,23 @@ class World(ShowBase):
         new_hpr.setZ(new_hpr.getZ() + angles[2])  # Increment X (heading) by 10 degrees
         body.setHpr(new_hpr)  # Apply the new heading, pitch, and roll to p1
 
-    def get_line(self, point_a, point_b, thickness=10):
-        self.line_segs = LineSegs()
-        
-        # Set line color (optional)
-        self.line_segs.setColor(1, 0, 0, 1)  # Red color
-                
-        # Add the line segment
-        self.line_segs.moveTo(*point_a)
-        self.line_segs.drawTo(*point_b)
-        
-        # Create a NodePath from the LineSegs
-        self.line_node = self.line_segs.create()
-        
-        # Attach the line NodePath to the render tree
-        self.line_np = NodePath(self.line_node)
-        
-        # Optionally, set the thickness of the line
-        self.line_np.setRenderModeThickness(thickness)
-        return self.line_np
 
     def init_models(self):
-        n = 8
-        m = 6
-        r = np.linspace(-n / 2, n / 2, n)
+        n = 1
+        m = 10
+        r = np.linspace(-n / 2, n / 2 + 1, n)
+        s = 3
         for i in r:
             for j in r:
-                self.Character.create_new(
-                    3,
+                c = self.Character.create_new(
                     [i * m, j * m, 5], 
                     [0, 0, 0],
-                    [1, 1, 1],
+                    [s, s, s],
                     [.2, .3, .8],
                     False
                 )
+                if self.player is None:
+                    self.player = c
 
             
     def add_random_box(self, static=False):
@@ -116,7 +108,7 @@ class World(ShowBase):
     def add_plane(self):
         self.add_box(
             position=[0, 0, -5],
-            scale=[40, 40, .1],
+            scale=[100, 100, .1],
             color=[.2, .8, .3],
             static=True
         )
@@ -208,9 +200,15 @@ class World(ShowBase):
 
     def update(self, task):
         dt = globalClock.getDt()
-        if sum([abs(x) for x in self.status['rotation']]) > 0:
-            self.apply_torque(self.player, self.status['rotation'])
-            
+        player = self.player['character']
+        for key, value in self.status.items():
+            if sum([abs(x) for x in value]) > 0:
+                leg = self.player['legs'][0]
+                n = player.getPos() - player.getPos()
+                n = n.normalized()
+                value = [value[0] * n.x, value[1] * n.y, value[2] * n.z]
+                self.affect(key, leg, value)
+              
         for o in self.Character.objects:
             self.apply_drag(o.node())
 
