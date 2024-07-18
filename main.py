@@ -12,9 +12,8 @@ class World(ShowBase):
         ShowBase.__init__(self)
         self.setBackgroundColor(0.4, .7, .8, 1)
         self.camera = base.cam
-        self.camera.setPos(0, -70, 10)
+        self.camera.setPos(0, -50, 10)
         self.camera.lookAt(0, 0, 0)
-        self.setFrameRateMeter(True)
 
         # World
         self.world = BulletWorld()
@@ -28,46 +27,24 @@ class World(ShowBase):
         }
 
         self.Character = Character(render, loader, self.world)
-        self.player = None
-        self._leg_num = -1
+        self.add_lighting()
         self.add_plane()
         self.init_models()
-        self.setup_keys()
-        self.add_lighting()
-    
-    def setup_keys(self):
+
         f = 100
-        
-        self.accept('q', self.Character.push_leg, [self.player, 0, True])
-        self.accept('q-up', self.Character.push_leg, [self.player, 0, False])
+        buttons = {'x': ['r', 'f'], 'y': ['e', 'd'], 'z': ['t', 'g'] }
 
-        self.accept('w', self.Character.push_leg, [self.player, 1, True])
-        self.accept('w-up', self.Character.push_leg, [self.player, 1, False])
+        for i, key in enumerate(buttons.keys()):
+            for j, k in enumerate(buttons[key]):
+                self.accept(k, self.set_body_rotation, [i, f * (1 if j % 2 == 0 else -1)])
+                self.accept(f'{k}-up', self.set_body_rotation, [i, 0])
 
-        self.accept('a', self.Character.push_leg, [self.player, 2, True])
-        self.accept('a-up', self.Character.push_leg, [self.player, 2, False])
-
-        self.accept('s', self.Character.push_leg, [self.player, 3, True])
-        self.accept('s-up', self.Character.push_leg, [self.player, 3, False])
-
-        self.accept('e', self.Character.turn_leg, [self.player, 0, True])
-        self.accept('e-up', self.Character.turn_leg, [self.player, 0, False])
-
-        self.accept('r', self.Character.turn_leg, [self.player, 1, True])
-        self.accept('r-up', self.Character.turn_leg, [self.player, 1, False])
-
-        self.accept('d', self.Character.turn_leg, [self.player, 2, True])
-        self.accept('d-up', self.Character.turn_leg, [self.player, 2, False])
-
-        self.accept('f', self.Character.turn_leg, [self.player, 3, True])
-        self.accept('f-up', self.Character.turn_leg, [self.player, 3, False])
 
     def set_body_rotation(self, axis, value):
         self.status['rotation'][axis] = value
 
-    def set_body_movement(self, axis, value):
-        self.status['movement'][axis] = value
-
+    def apply_force(self, body, force):
+        body.applyCentralForce(force)
 
     def apply_drag(self, body):
         fluid_density = .1225  # Density of air at sea level in kg/m^3
@@ -78,6 +55,8 @@ class World(ShowBase):
         drag_force = velocity.normalized() * drag_force_magnitude
         body.applyCentralForce(drag_force)
 
+    def apply_torque(self, np, torque):
+        np.node().applyTorque(Vec3(*torque))
 
     def rotate_body(self, body, angles):
         current_hpr = body.getHpr()  # Get current HPR (heading, pitch, roll)
@@ -87,23 +66,40 @@ class World(ShowBase):
         new_hpr.setZ(new_hpr.getZ() + angles[2])  # Increment X (heading) by 10 degrees
         body.setHpr(new_hpr)  # Apply the new heading, pitch, and roll to p1
 
+    def get_line(self, point_a, point_b, thickness=10):
+        self.line_segs = LineSegs()
+        
+        # Set line color (optional)
+        self.line_segs.setColor(1, 0, 0, 1)  # Red color
+                
+        # Add the line segment
+        self.line_segs.moveTo(*point_a)
+        self.line_segs.drawTo(*point_b)
+        
+        # Create a NodePath from the LineSegs
+        self.line_node = self.line_segs.create()
+        
+        # Attach the line NodePath to the render tree
+        self.line_np = NodePath(self.line_node)
+        
+        # Optionally, set the thickness of the line
+        self.line_np.setRenderModeThickness(thickness)
+        return self.line_np
 
     def init_models(self):
-        n = 1
-        m = 10
-        r = np.linspace(-n / 2, n / 2 + 1, n)
-        s = 3
+        n = 8
+        m = 6
+        r = np.linspace(-n / 2, n / 2, n)
         for i in r:
             for j in r:
-                c = self.Character.create_new(
+                self.Character.create_new(
+                    3,
                     [i * m, j * m, 5], 
                     [0, 0, 0],
-                    [s, s, s],
+                    [1, 1, 1],
                     [.2, .3, .8],
                     False
                 )
-                if self.player is None:
-                    self.player = c
 
             
     def add_random_box(self, static=False):
@@ -120,7 +116,7 @@ class World(ShowBase):
     def add_plane(self):
         self.add_box(
             position=[0, 0, -5],
-            scale=[100, 100, .1],
+            scale=[40, 40, .1],
             color=[.2, .8, .3],
             static=True
         )
@@ -148,32 +144,75 @@ class World(ShowBase):
 
         self.render.setShaderAuto()
 
-    # def create_material(self, color):
-    #     # Create a new material
-    #     mat = Material()
+    def create_material(self, color):
+        # Create a new material
+        mat = Material()
         
-    #     # Set the diffuse color to red
-    #     mat.setDiffuse((*color, 1))
+        # Set the diffuse color to red
+        mat.setDiffuse((*color, 1))
         
-    #     # Optionally, set other material properties
-    #     # mat.setAmbient((0.2, 0, 0, 1))
-    #     mat.setSpecular((1, 1, 1, 1))
-    #     mat.setShininess(50.0)
+        # Optionally, set other material properties
+        # mat.setAmbient((0.2, 0, 0, 1))
+        mat.setSpecular((1, 1, 1, 1))
+        mat.setShininess(50.0)
         
-    #     return mat
-    
+        return mat
+
+        model = loader.loadModel('models/box.egg')
+        model.setTextureOff(1)
+        model.setScale(*scale)
+        model.setColor(*color)
+        model.setPos(*[-h for h in half_scale])
+
+        model.reparentTo(np)
+
+        return np
+
+    def get_cube_model(self):
+        format = GeomVertexFormat.getV3()
+        data = GeomVertexData("Data", format, Geom.UHStatic)
+        vertices = GeomVertexWriter(data, "vertex")
+
+        size = .5
+        vertices.addData3f(-size, -size, -size)
+        vertices.addData3f(+size, -size, -size)
+        vertices.addData3f(-size, +size, -size)
+        vertices.addData3f(+size, +size, -size)
+        vertices.addData3f(-size, -size, +size)
+        vertices.addData3f(+size, -size, +size)
+        vertices.addData3f(-size, +size, +size)
+        vertices.addData3f(+size, +size, +size)
+
+        triangles = GeomTriangles(Geom.UHStatic)
+
+        def addQuad(v0, v1, v2, v3):
+            triangles.addVertices(v0, v1, v2)
+            triangles.addVertices(v0, v2, v3)
+            triangles.closePrimitive()
+
+        addQuad(4, 5, 7, 6) # Z+
+        addQuad(0, 2, 3, 1) # Z-
+        addQuad(3, 7, 5, 1) # X+
+        addQuad(4, 6, 2, 0) # X-
+        addQuad(2, 6, 7, 3) # Y+
+        addQuad(0, 1, 5, 4) # Y+
+
+        geom = Geom(data)
+        geom.addPrimitive(triangles)
+
+        node = GeomNode("CubeMaker")
+        node.addGeom(geom)
+
+        return NodePath(node)
+
+
     def update(self, task):
         dt = globalClock.getDt()
-        player = self.player['character']
-
-        # apply movement and rotation
-        for key, a in self.player['affect'].items():
-            if a['active']:
-                force = a['force']
-                utils.affect(key, player, force)
-              
-        # for o in self.Character.objects:
-        #     self.apply_drag(o.node())
+        if sum([abs(x) for x in self.status['rotation']]) > 0:
+            self.apply_torque(self.player, self.status['rotation'])
+            
+        for o in self.Character.objects:
+            self.apply_drag(o.node())
 
         self.world.doPhysics(dt)
         return task.cont
