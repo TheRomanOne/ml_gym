@@ -36,6 +36,7 @@ class Character:
             utils.get_line(v, pos).reparentTo(player)
         return player
     
+    
     def create_new(self, position, rotation=[0, 0, 0], scale=[1, 1, 1], color=[.78, .78, .78], static=False, mass=1):
         player = self.get_box(position, rotation, scale, color, static, mass)
         self.objects.append(player)
