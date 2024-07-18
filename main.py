@@ -38,43 +38,41 @@ class World(ShowBase):
     def setup_keys(self):
         f = 100
         
-        self.accept('q', self.push_leg, [0, True])
-        self.accept('q-up', self.push_leg, [0, False])
+        self.accept('q', self.Character.push_leg, [self.player, 0, True])
+        self.accept('q-up', self.Character.push_leg, [self.player, 0, False])
 
-        self.accept('w', self.push_leg, [1, True])
-        self.accept('w-up', self.push_leg, [1, False])
+        self.accept('w', self.Character.push_leg, [self.player, 1, True])
+        self.accept('w-up', self.Character.push_leg, [self.player, 1, False])
 
-        self.accept('a', self.push_leg, [2, True])
-        self.accept('a-up', self.push_leg, [2, False])
+        self.accept('a', self.Character.push_leg, [self.player, 2, True])
+        self.accept('a-up', self.Character.push_leg, [self.player, 2, False])
 
-        self.accept('s', self.push_leg, [3, True])
-        self.accept('s-up', self.push_leg, [3, False])
+        self.accept('s', self.Character.push_leg, [self.player, 3, True])
+        self.accept('s-up', self.Character.push_leg, [self.player, 3, False])
 
-        self.accept('q', self.turn_leg, [0, True])
-        self.accept('q-up', self.turn_leg, [0, False])
+        # self.accept('q', self.turn_leg, [0, True])
+        # self.accept('q-up', self.turn_leg, [0, False])
 
-        self.accept('w', self.turn_leg, [1, True])
-        self.accept('w-up', self.turn_leg, [1, False])
+        # self.accept('w', self.turn_leg, [1, True])
+        # self.accept('w-up', self.turn_leg, [1, False])
 
-        self.accept('a', self.turn_leg, [2, True])
-        self.accept('a-up', self.turn_leg, [2, False])
+        # self.accept('a', self.turn_leg, [2, True])
+        # self.accept('a-up', self.turn_leg, [2, False])
 
-        self.accept('s', self.turn_leg, [3, True])
-        self.accept('s-up', self.turn_leg, [3, False])
+        # self.accept('s', self.turn_leg, [3, True])
+        # self.accept('s-up', self.turn_leg, [3, False])
 
     def turn_leg(self, leg_num, active):
-        self._leg_num = leg_num if active else -1
-
-    def push_leg(self, leg_num, active):
-        self._leg_num = leg_num if active else -1
+        pass
+        # self.player['affect']['rotation']['active'] = True
+        # self.player['affect']['rotation']['force'] = Vec3()
+        # self._leg_num = leg_num if active else -1
 
     def set_body_rotation(self, axis, value):
         self.status['rotation'][axis] = value
 
     def set_body_movement(self, axis, value):
         self.status['movement'][axis] = value
-
-   
 
 
     def apply_drag(self, body):
@@ -171,14 +169,14 @@ class World(ShowBase):
     #     return mat
     
     def update(self, task):
-        dt = 2.#globalClock.getDt()
+        dt = globalClock.getDt()
         player = self.player['character']
 
-        if self._leg_num > -1:
-            leg = self.player['legs'][self._leg_num]
-            dist = player.getPos(leg)
-            force = dist.normalized() * 10
-            self.affect('movement', player, force)
+        # apply movement and rotation
+        for key, a in self.player['affect'].items():
+            if a['active']:
+                force = a['force']
+                utils.affect(key, player, force)
               
         # for o in self.Character.objects:
         #     self.apply_drag(o.node())

@@ -36,7 +36,20 @@ class Character:
             utils.get_line(v, pos).reparentTo(player)
         return player
     
-    
+    def push_leg(self, char, leg_num, active):
+        char['affect']['movement']['active'] = active
+        leg = char['legs'][leg_num]
+        dist = char['character'].getPos(leg)
+        force = dist.normalized() * 10
+        char['affect']['movement']['force'] = force
+
+    def turn_leg(self, char, leg_num, active):
+        char['affect']['movement']['active'] = active
+        leg = char['legs'][leg_num]
+        dist = char['character'].getPos(leg)
+        force = dist.normalized() * 10
+        char['affect']['movement']['force'] = force
+
     def create_new(self, position, rotation=[0, 0, 0], scale=[1, 1, 1], color=[.78, .78, .78], static=False, mass=1):
         player = self.get_box(position, rotation, scale, color, static, mass)
         self.objects.append(player)
