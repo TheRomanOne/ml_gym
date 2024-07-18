@@ -1,6 +1,6 @@
 import utils, random
 import numpy as np
-from panda3d.core import LineSegs, TransformState, Vec4, Vec3, Point3, Geom, GeomNode, GeomVertexFormat, GeomVertexData, GeomTriangles, GeomVertexWriter, NodePath, Material, DirectionalLight, AmbientLight
+from panda3d.core import Vec3
 
 __MOBILITY__ = {
         'SOLID': {
@@ -9,8 +9,8 @@ __MOBILITY__ = {
             },
 
         'LOOSE': {
-            'linear': {'min': [0, 0, 0], 'max': [00, 0, 0]},
-            'angular': {'min': [-20, 0, 0], 'max': [20, 0, 0]}
+            'linear': {'min': [0, 0, -1], 'max': [0, 0, 1]},
+            'angular': {'min': [-0.2, -0.2, 0], 'max': [0.2, 0.2, 0]}
             }
 }
 
@@ -36,22 +36,27 @@ class Character:
             utils.get_line(v, pos).reparentTo(player)
         return player
     
-    def create_new(self, num_weights, position, rotation=[0, 0, 0], scale=[1, 1, 1], color=[.78, .78, .78], static=False, mass=1):
+    def create_new(self, position, rotation=[0, 0, 0], scale=[1, 1, 1], color=[.78, .78, .78], static=False, mass=1):
         player = self.get_box(position, rotation, scale, color, static, mass)
         self.objects.append(player)
         pos = 3 * [0]
-        chars = [player]
-        for i in range(15):
-            p1 = chars[i]
-            v = np.random.uniform(1, 3, size=3)
-            if random.random() < .5: v[0] *= -1
-            if random.random() < .5: v[1] *= -1
-            if random.random() < .5: v[2] *= -1
-            v = v.tolist()
-            p2 = self.add_new_weight(p1, position=v, scale=[.5, .5, .5], mass=.5, mobility=__MOBILITY__['SOLID'])
-            chars.append(p2)
-            utils.get_line(v, pos).reparentTo(p1)
-        return player
+        legs = []
+        for i in [-2, 2]:
+            for j in [-2, 2]:
+                v = [i, j, -scale[0] - 2]
+                p2 = self.add_new_weight(player, position=v, scale=[scale[0]/2, scale[0]/2, scale[0]/7], mass=.5, mobility=__MOBILITY__['LOOSE'])
+                legs.append(p2)
+        
+        char = {
+            'character': player,
+            'legs': legs,
+            'affect': {
+                'movement': {'active': False, 'force': None},
+                'rotation': {'active': False, 'force': None}
+            }
+        }
+        
+        return char
     
     def get_box(self, position, rotation=[0, 0, 0], scale=[1, 1, 1], color=[.78, .78, .78], static=False, mass=1):
         node = utils.new_box_node(scale, static, mass)

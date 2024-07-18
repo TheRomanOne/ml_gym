@@ -17,7 +17,7 @@ class World(ShowBase):
 
         # World
         self.world = BulletWorld()
-        self.world.setGravity(Vec3(0, 0, -9.81))
+        self.world.setGravity(Vec3(0, 0, -19.81))
 
         taskMgr.add(self.update, 'update')
 
@@ -28,6 +28,7 @@ class World(ShowBase):
 
         self.Character = Character(render, loader, self.world)
         self.player = None
+        self._leg_num = -1
         self.add_plane()
         self.init_models()
         self.setup_keys()
@@ -36,13 +37,20 @@ class World(ShowBase):
     def setup_keys(self):
         f = 100
         
-        self.accept('arrow_up', self.set_body_movement, [2, -f])
-        self.accept('arrow_up-up', self.set_body_movement, [2, 0])
+        self.accept('q', self.move_leg, [0, True])
+        self.accept('q-up', self.move_leg, [0, False])
 
-        self.accept('arrow_left', self.set_body_rotation, [0, f])
-        self.accept('arrow_left-up', self.set_body_rotation, [0, 0])
-        self.accept('arrow_right', self.set_body_rotation, [0, -f])
-        self.accept('arrow_right-up', self.set_body_rotation, [0, 0])
+        self.accept('w', self.move_leg, [1, True])
+        self.accept('w-up', self.move_leg, [1, False])
+
+        self.accept('a', self.move_leg, [2, True])
+        self.accept('a-up', self.move_leg, [2, False])
+
+        self.accept('s', self.move_leg, [3, True])
+        self.accept('s-up', self.move_leg, [3, False])
+
+    def move_leg(self, leg_num, active):
+        self._leg_num = leg_num if active else -1
 
     def set_body_rotation(self, axis, value):
         self.status['rotation'][axis] = value
@@ -201,16 +209,16 @@ class World(ShowBase):
     def update(self, task):
         dt = globalClock.getDt()
         player = self.player['character']
-        for key, value in self.status.items():
-            if sum([abs(x) for x in value]) > 0:
-                leg = self.player['legs'][0]
-                n = player.getPos() - player.getPos()
-                n = n.normalized()
-                value = [value[0] * n.x, value[1] * n.y, value[2] * n.z]
-                self.affect(key, leg, value)
+        # for key, value in self.status.items():
+            # if sum([abs(x) for x in value]) > 0:
+        if self._leg_num > -1:
+            leg = self.player['legs'][self._leg_num]
+            dist = player.getPos(leg)
+            force = dist.normalized() * 20
+            self.affect('movement', player, force)
               
-        for o in self.Character.objects:
-            self.apply_drag(o.node())
+        # for o in self.Character.objects:
+        #     self.apply_drag(o.node())
 
         self.world.doPhysics(dt)
         return task.cont
