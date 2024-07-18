@@ -50,23 +50,17 @@ class World(ShowBase):
         self.accept('s', self.Character.push_leg, [self.player, 3, True])
         self.accept('s-up', self.Character.push_leg, [self.player, 3, False])
 
-        # self.accept('q', self.turn_leg, [0, True])
-        # self.accept('q-up', self.turn_leg, [0, False])
+        self.accept('e', self.Character.turn_leg, [self.player, 0, True])
+        self.accept('e-up', self.Character.turn_leg, [self.player, 0, False])
 
-        # self.accept('w', self.turn_leg, [1, True])
-        # self.accept('w-up', self.turn_leg, [1, False])
+        self.accept('r', self.Character.turn_leg, [self.player, 1, True])
+        self.accept('r-up', self.Character.turn_leg, [self.player, 1, False])
 
-        # self.accept('a', self.turn_leg, [2, True])
-        # self.accept('a-up', self.turn_leg, [2, False])
+        self.accept('d', self.Character.turn_leg, [self.player, 2, True])
+        self.accept('d-up', self.Character.turn_leg, [self.player, 2, False])
 
-        # self.accept('s', self.turn_leg, [3, True])
-        # self.accept('s-up', self.turn_leg, [3, False])
-
-    def turn_leg(self, leg_num, active):
-        pass
-        # self.player['affect']['rotation']['active'] = True
-        # self.player['affect']['rotation']['force'] = Vec3()
-        # self._leg_num = leg_num if active else -1
+        self.accept('f', self.Character.turn_leg, [self.player, 3, True])
+        self.accept('f-up', self.Character.turn_leg, [self.player, 3, False])
 
     def set_body_rotation(self, axis, value):
         self.status['rotation'][axis] = value

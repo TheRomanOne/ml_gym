@@ -38,17 +38,26 @@ class Character:
     
     def push_leg(self, char, leg_num, active):
         char['affect']['movement']['active'] = active
-        leg = char['legs'][leg_num]
-        dist = char['character'].getPos(leg)
-        force = dist.normalized() * 10
-        char['affect']['movement']['force'] = force
+        if active:
+            leg = char['legs'][leg_num]
+            dist = char['character'].getPos(leg)
+            force = dist.normalized() * 100
+            char['affect']['movement']['force'] = force
 
     def turn_leg(self, char, leg_num, active):
-        char['affect']['movement']['active'] = active
-        leg = char['legs'][leg_num]
-        dist = char['character'].getPos(leg)
-        force = dist.normalized() * 10
-        char['affect']['movement']['force'] = force
+        char['affect']['rotation']['active'] = active
+        if active:
+            force = [0, 0, 0]
+            if leg_num == 0:
+                force[0] = 100
+            elif leg_num == 1:
+                force[0] = -100
+            elif leg_num == 2:
+                force[2] = 100
+            elif leg_num == 3:
+                force[2] = -100
+
+            char['affect']['rotation']['force'] = force
 
     def create_new(self, position, rotation=[0, 0, 0], scale=[1, 1, 1], color=[.78, .78, .78], static=False, mass=1):
         player = self.get_box(position, rotation, scale, color, static, mass)

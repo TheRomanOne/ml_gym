@@ -12,15 +12,16 @@ def new_box_node(scale=[1, 1, 1], static=False, mass=1):
 
     return node
     
-def affect(self, a_type, np, value):
+def affect(a_type, np, value):
+    if not np.node().isActive():
+        np.node().setActive(True)
+        # print('activated')
     if a_type == 'rotation':
         np.node().applyTorque(Vec3(*value))
+        print(value)
     elif a_type == 'movement':
-        if not np.node().isActive():
-            np.node().setActive(True)
-            print('activated')
         np.node().applyCentralForce(Vec3(*value))
-        
+
 def join(p1, p2, mobility):
     # t1 = TransformState.makePos(Point3(0, 0, 0))
     t2 = TransformState.makePos(p2.getPos() - p1.getPos())
