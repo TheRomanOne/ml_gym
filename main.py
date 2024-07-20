@@ -1,5 +1,5 @@
 from panda3d.core import LineSegs, TransformState, Vec4, Vec3, Point3, Geom, GeomNode, GeomVertexFormat, GeomVertexData, GeomTriangles, GeomVertexWriter, NodePath, Material, DirectionalLight, AmbientLight
-from panda3d.bullet import BulletGenericConstraint, BulletWorld
+from panda3d.bullet import BulletDebugNode, BulletWorld
 from direct.showbase.ShowBase import ShowBase
 import random, utils
 import numpy as np
@@ -34,6 +34,8 @@ class World(ShowBase):
         self.init_models()
         self.setup_keys()
         self.add_lighting()
+
+        # self.setup_debugger()
     
     def setup_keys(self):
         f = 100
@@ -114,11 +116,12 @@ class World(ShowBase):
         # p[2] += 5
         return self.add_box(p, r, s, [.8, .3, .2], False)
 
-    def add_box(self, position, rotation=[0, 0, 0], scale=[1, 1, 1], color=[.78, .78, .78], static=False, mass=1):
-        return self.Character.get_box(position, rotation, scale, color, static, mass)
+    def add_box(self, name, position, rotation=[0, 0, 0], scale=[1, 1, 1], color=[.78, .78, .78], static=False, mass=1):
+        return self.Character.get_box(name, position, rotation, scale, color, static, mass)
 
     def add_plane(self):
         self.add_box(
+            name="Plane",
             position=[0, 0, -5],
             scale=[100, 100, .1],
             color=[.2, .8, .3],
@@ -162,19 +165,39 @@ class World(ShowBase):
         
     #     return mat
     
+    def setup_debugger(self):
+        debug_node = BulletDebugNode('Debug')
+        debug_node.showWireframe(True)
+        debug_node.showConstraints(True)
+        debug_node.showBoundingBoxes(True)
+        debug_node.showNormals(True)
+        debug_np = self.render.attachNewNode(debug_node)
+        debug_np.show()
+        self.world.setDebugNode(debug_np.node())
+
     def update(self, task):
         dt = globalClock.getDt()
         player = self.player['character']
 
         # apply movement and rotation
+              
+        # for o in self.Character.objects:
+        #     self.apply_drag(o.node())
+        legs = self.player['legs']
+        for i, leg_obj in enumerate(legs['objects']):
+            c = utils.get_collisions(self.world, leg_obj.node())
+            if c is not None and c['obj'].name == 'Plane':
+                legs['collisions'][i] = c
+                leg_obj.getChildren()[0].setColor(1, 1, 1, 1)
+            else:
+                legs['collisions'][i] = None
+                leg_obj.getChildren()[0].setColor(.5, .5, .5, 1)
+        
         for key, a in self.player['affect'].items():
             if a['active']:
                 force = a['force']
                 utils.affect(key, player, force)
-              
-        # for o in self.Character.objects:
-        #     self.apply_drag(o.node())
-
+        
         self.world.doPhysics(dt)
         return task.cont
 

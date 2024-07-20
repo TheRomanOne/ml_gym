@@ -1,6 +1,6 @@
 import utils, random
 import numpy as np
-from panda3d.core import Vec3
+from panda3d.core import Vec3, BitMask32
 
 __MOBILITY__ = {
         'SOLID': {
@@ -38,11 +38,13 @@ class Character:
     
     def push_leg(self, char, leg_num, active):
         char['affect']['movement']['active'] = active
-        if active:
-            leg = char['legs'][leg_num]
+        if active and char['legs']['collisions'][leg_num] is not None:
+            leg = char['legs']['objects'][leg_num]
             dist = char['character'].getPos(leg)
             force = dist.normalized() * 100
             char['affect']['movement']['force'] = force
+        else:
+            char['affect']['movement']['force'] = Vec3(0, 0, 0)
 
     def turn_leg(self, char, leg_num, active):
         char['affect']['rotation']['active'] = active
@@ -60,7 +62,7 @@ class Character:
             char['affect']['rotation']['force'] = force
 
     def create_new(self, position, rotation=[0, 0, 0], scale=[1, 1, 1], color=[.78, .78, .78], static=False, mass=1):
-        player = self.get_box(position, rotation, scale, color, static, mass)
+        player = self.get_box('Player', position, rotation, scale, color, static, mass)
         self.objects.append(player)
         pos = 3 * [0]
         legs = []
@@ -72,7 +74,7 @@ class Character:
         
         char = {
             'character': player,
-            'legs': legs,
+            'legs': {'objects': legs, 'collisions': [None for n in legs]},
             'affect': {
                 'movement': {'active': False, 'force': None},
                 'rotation': {'active': False, 'force': None}
@@ -80,12 +82,15 @@ class Character:
         }
         
         return char
-    
-    def get_box(self, position, rotation=[0, 0, 0], scale=[1, 1, 1], color=[.78, .78, .78], static=False, mass=1):
+
+
+    def get_box(self, name, position, rotation=[0, 0, 0], scale=[1, 1, 1], color=[.78, .78, .78], static=False, mass=1):
         node = utils.new_box_node(scale, static, mass)
         np = self.render.attachNewNode(node)
+        np.setName(name)
         np.setHpr(*rotation)  
         np.setPos(*position)
+        np.setCollideMask(BitMask32.allOn())
 
         half_scale = [scale[0]/2, scale[1]/2, scale[2]/2]
         model = self.loader.loadModel('models/box.egg')
@@ -100,7 +105,7 @@ class Character:
 
     def add_new_weight(self, p1, position, scale=[1, 1, 1], mass=1, mobility=None):
         position = Vec3(*position) + p1.getPos()
-        p2 = self.get_box(position=position, scale=scale, mass=mass)
+        p2 = self.get_box('leg', position=position, scale=scale, mass=mass)
         constraint = utils.join(p1, p2, mobility)   
         self.world.attachConstraint(constraint)
         self.objects.append(p2)

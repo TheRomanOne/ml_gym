@@ -1,4 +1,4 @@
-from panda3d.bullet import BulletGenericConstraint, BulletWorld, BulletPlaneShape, BulletRigidBodyNode, BulletBoxShape
+from panda3d.bullet import BulletContactResult, BulletGenericConstraint, BulletWorld, BulletPlaneShape, BulletRigidBodyNode, BulletBoxShape
 from panda3d.core import LineSegs, TransformState, Vec4, Vec3, Point3, Geom, GeomNode, GeomVertexFormat, GeomVertexData, GeomTriangles, GeomVertexWriter, NodePath, Material, DirectionalLight, AmbientLight
 
 def new_box_node(scale=[1, 1, 1], static=False, mass=1):
@@ -58,3 +58,21 @@ def get_line(point_a, point_b, thickness=10):
     # Optionally, set the thickness of the line
     line_np.setRenderModeThickness(thickness)
     return line_np
+
+def get_collisions(world, obj):
+    contact_result = world.contactTest(obj)
+    # contacts = []
+    if contact_result.getNumContacts() > 0:
+        for contact in contact_result.getContacts():
+            point = contact.getManifoldPoint()
+            
+            c = {
+                'obj': contact.getNode1(),
+                'pos': point.getPositionWorldOnB(),
+                'normal': point.getNormalWorldOnB()
+            }
+            # contacts.append(c)
+            return c
+    return None
+
+            
