@@ -1,6 +1,11 @@
-import utils, random
+import utils, random, sys
 import numpy as np
 from panda3d.core import Vec3, BitMask32
+import torch
+
+sys.path.append('/home/roman/Desktop/ML/pipeline')
+
+from custom_models.Gym import GymNN
 
 __MOBILITY__ = {
         'SOLID': {
@@ -19,7 +24,7 @@ class Character:
         self.render = render
         self.world = world
         self.loader = loader
-
+        self.brain = GymNN(input_dim=7, hidden_dim=100)
         self.objects = []
 
     def create_char_spikes(self, position, rotation=[0, 0, 0], scale=[1, 1, 1], color=[.78, .78, .78], static=False, mass=1):
@@ -41,7 +46,7 @@ class Character:
         if active and char['legs']['collisions'][leg_num] is not None:
             leg = char['legs']['objects'][leg_num]
             dist = char['character'].getPos(leg)
-            force = dist.normalized() * 100
+            force = dist.normalized() * 50
             char['affect']['movement']['force'] = force
         else:
             char['affect']['movement']['force'] = Vec3(0, 0, 0)
@@ -83,7 +88,6 @@ class Character:
         
         return char
 
-
     def get_box(self, name, position, rotation=[0, 0, 0], scale=[1, 1, 1], color=[.78, .78, .78], static=False, mass=1):
         node = utils.new_box_node(scale, static, mass)
         np = self.render.attachNewNode(node)
@@ -111,4 +115,13 @@ class Character:
         self.objects.append(p2)
         return p2
     
-    
+    def interact(self, collisions):
+        pos = self.objects[0].getPos()
+        rot = self.objects[0].getHpr()
+        
+        pos = torch.tensor([pos.x, pos.y, pos.z])
+        rot = torch.tensor([rot.x, rot.y, rot.z])
+
+        # add loose param
+        input_t = torch.cat((torch.cat((pos, rot)), torch.tensor([1])))
+        return self.brain(input_t.unsqueeze(0))

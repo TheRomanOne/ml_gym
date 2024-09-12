@@ -1,11 +1,15 @@
-from panda3d.core import LineSegs, TransformState, Vec4, Vec3, Point3, Geom, GeomNode, GeomVertexFormat, GeomVertexData, GeomTriangles, GeomVertexWriter, NodePath, Material, DirectionalLight, AmbientLight
+from panda3d.core import Vec4, Vec3, Point3, DirectionalLight, AmbientLight
 from panda3d.bullet import BulletDebugNode, BulletWorld
 from direct.showbase.ShowBase import ShowBase
 import random, utils
 import numpy as np
 from Character import Character
+import sys
+import torch
 
+sys.path.append('/home/roman/Desktop/ML/pipeline')
 
+from custom_models.Gym import GymNN
 
 class World(ShowBase):
     def __init__(self) -> None:
@@ -193,12 +197,21 @@ class World(ShowBase):
                 legs['collisions'][i] = None
                 leg_obj.getChildren()[0].setColor(.5, .5, .5, 1)
         
+
+        leg_num, is_active = self.Character.interact(legs['collisions'])
+        leg_num = torch.argmax(leg_num.detach().squeeze())
+        is_active = is_active[0].item() > .5
+        self.Character.push_leg(self.player, leg_num, is_active)
+        print(is_active)
+        self.world.doPhysics(dt)
+        
+        
         for key, a in self.player['affect'].items():
             if a['active']:
                 force = a['force']
                 utils.affect(key, player, force)
-        
-        self.world.doPhysics(dt)
+
+
         return task.cont
 
 world = World()
