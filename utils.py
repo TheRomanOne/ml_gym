@@ -1,5 +1,11 @@
-from panda3d.bullet import BulletContactResult, BulletGenericConstraint, BulletWorld, BulletPlaneShape, BulletRigidBodyNode, BulletBoxShape
-from panda3d.core import LineSegs, TransformState, Vec4, Vec3, Point3, Geom, GeomNode, GeomVertexFormat, GeomVertexData, GeomTriangles, GeomVertexWriter, NodePath, Material, DirectionalLight, AmbientLight
+from panda3d.bullet import BulletContactResult, BulletGenericConstraint, BulletRigidBodyNode, BulletBoxShape
+from panda3d.core import LineSegs, TransformState, BitMask32, Vec3, NodePath
+# import direct.showbase.ShowBase
+
+
+NO_COLLISION_MASK = BitMask32.bit(0)
+# DEFAULT_MASK = BitMask32.allOn()
+DEFAULT_MASK = BitMask32.bit(1)
 
 def new_box_node(scale=[1, 1, 1], static=False, mass=1):
     # Box
@@ -13,14 +19,15 @@ def new_box_node(scale=[1, 1, 1], static=False, mass=1):
     return node
     
 def affect(a_type, np, value):
-    if not np.node().isActive():
-        np.node().setActive(True)
+    node = np.node()
+    if not node.isActive():
+        node.setActive(True)
         # print('activated')
     if a_type == 'rotation':
-        np.node().applyTorque(Vec3(*value))
+        node.applyTorque(Vec3(*value))
         print(value)
     elif a_type == 'movement':
-        np.node().applyCentralForce(Vec3(*value))
+        node.applyCentralForce(Vec3(*value))
 
 def join(p1, p2, mobility):
     # t1 = TransformState.makePos(Point3(0, 0, 0))
@@ -75,4 +82,22 @@ def get_collisions(world, obj):
             return c
     return None
 
-            
+
+def get_box(name, position, rotation=[0, 0, 0], scale=[1, 1, 1], color=[.78, .78, .78], static=False, mass=1):
+    node = new_box_node(scale, static, mass)
+    np = render.attachNewNode(node)
+    np.setName(name)
+    np.setHpr(*rotation)  
+    np.setPos(*position)
+    np.setCollideMask(DEFAULT_MASK)
+
+    half_scale = [scale[0]/2, scale[1]/2, scale[2]/2]
+    model = loader.loadModel('models/box.egg')
+    model.setTextureOff(1)
+    model.setScale(*scale)
+    model.setColor(*color)
+    model.setPos(*[-h for h in half_scale])
+
+    model.reparentTo(np)
+    
+    return np
