@@ -101,3 +101,26 @@ def get_box(name, position, rotation=[0, 0, 0], scale=[1, 1, 1], color=[.78, .78
     model.reparentTo(np)
     
     return np
+
+
+# def rotate_body(body, angles):
+#     current_hpr = body.getHpr()
+#     new_hpr = Point3(current_hpr)
+#     new_hpr.setX(new_hpr.getX() + angles[0])
+#     new_hpr.setY(new_hpr.getY() + angles[1])
+#     new_hpr.setZ(new_hpr.getZ() + angles[2])
+#     body.setHpr(new_hpr)
+
+# def create_material(self, color):
+    #     # Create a new material
+    #     mat = Material()
+        
+    #     # Set the diffuse color to red
+    #     mat.setDiffuse((*color, 1))
+        
+    #     # Optionally, set other material properties
+    #     # mat.setAmbient((0.2, 0, 0, 1))
+    #     mat.setSpecular((1, 1, 1, 1))
+    #     mat.setShininess(50.0)
+        
+    #     return mat
