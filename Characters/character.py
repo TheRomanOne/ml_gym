@@ -3,7 +3,7 @@ from panda3d.core import Vec3
 import utils
 import torch
 
-sys.path.append('/home/roman/Desktop/ML/pipeline')
+
 
 from custom_models.Gym import GymNN
 
@@ -20,17 +20,19 @@ __MOBILITY__ = {
 }
 
 class Character:
-    def __init__(self, render, loader, world, input_dim, hidden_dim) -> None:
+    def __init__(self, render, loader, world, input_dim, hidden_dim, num_categories) -> None:
         self.render = render
         self.world = world
         self.loader = loader
-        self.brain = GymNN(input_dim=input_dim, hidden_dim=hidden_dim)
+        self.brain = GymNN(input_dim=input_dim, hidden_dim=hidden_dim, num_categories=num_categories)
         self.objects = []
+        self.models = []
 
     def create_new(self, position, rotation=[0, 0, 0], scale=[1, 1, 1], color=[.78, .78, .78], static=False, mass=1):
-        char = utils.get_box('character', position, rotation, scale, color, static, mass)
+        char, model = utils.get_box('character', position, rotation, scale, color, static, mass)
         self.world.attachRigidBody(char.node())
         self.objects.append(char)
+        self.models.append(model)
         # pos = 3 * [0]
         legs = []
         for i in [-2.2, 2.2]:
@@ -50,11 +52,12 @@ class Character:
 
     def add_new_weight(self, p1, position, scale=[1, 1, 1], mass=1, mobility=None):
         position = Vec3(*position) + p1.getPos()
-        p2 = utils.get_box('leg', position=position, scale=scale, mass=mass)
+        p2, model = utils.get_box('leg', position=position, scale=scale, mass=mass)
         self.world.attachRigidBody(p2.node())
         constraint = utils.join(p1, p2, mobility)   
         self.world.attachConstraint(constraint)
         self.objects.append(p2)
+        self.models.append(model)
         return p2
     
     

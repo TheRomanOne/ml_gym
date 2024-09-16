@@ -1,6 +1,6 @@
 from panda3d.bullet import BulletContactResult, BulletGenericConstraint, BulletRigidBodyNode, BulletBoxShape
 from panda3d.core import LineSegs, TransformState, BitMask32, Vec3, NodePath
-# import direct.showbase.ShowBase
+import torch
 
 
 NO_COLLISION_MASK = BitMask32.bit(0)
@@ -100,7 +100,24 @@ def get_box(name, position, rotation=[0, 0, 0], scale=[1, 1, 1], color=[.78, .78
 
     model.reparentTo(np)
     
-    return np
+    return np, model
+
+def flatten_model(model):
+    """Flatten the model's parameters into a 1D tensor."""
+    flat_params = []
+    for param in model.parameters():
+        flat_params.append(param.view(-1))
+    return torch.cat(flat_params)
+
+def unflatten_model(model, flat_tensor):
+    """Restore the model's parameters from a 1D tensor without affecting gradients."""
+    offset = 0
+    with torch.no_grad():  # Disable gradient tracking
+        for param in model.parameters():
+            param_size = param.numel()
+            param_data = flat_tensor[offset:offset + param_size]
+            param.copy_(param_data.view_as(param))  # Copy the data into the parameter
+            offset += param_size
 
 
 # def rotate_body(body, angles):
