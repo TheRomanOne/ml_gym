@@ -11,7 +11,7 @@ class Walker(Character):
         self.prev_distance_to_target = -1
         self.score = 0
 
-        # self.terminated = False
+        self.terminated = False
 
     def push_leg(self, leg_num, active, force):
         self.state['affect']['movement']['active'] = active
@@ -40,7 +40,20 @@ class Walker(Character):
 
     @torch.no_grad()
     def interact(self):
+        if self.terminated:
+            return
+
         legs = self.state['legs']
+
+        body_collision = utils.get_collisions(self.world, self.state['character'].node())
+        if body_collision is not None: # hit something
+            self.terminated = True
+            self.world.remove_rigid_body(self.state['character'].node())
+            for l in legs['objects']:
+                self.world.remove_rigid_body(l.node())
+            self.state['character'].getChildren()[0].setColor(.2, .2, .4, 1)
+            return
+
         leg_binary = [0] * len(legs['objects'])
         for i, leg_obj in enumerate(legs['objects']):
             c = utils.get_collisions(self.world, leg_obj.node())
@@ -94,6 +107,10 @@ class Walker(Character):
 
     @torch.no_grad()
     def evaluate(self):
+        if self.terminated:
+            self.score -= 1
+            return
+        
         pos = self.objects[0].getPos()
         t_pos = self.target.getPos()
         distance = (t_pos - pos).length()

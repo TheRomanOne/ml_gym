@@ -23,11 +23,13 @@ def affect(a_type, np, value):
     if not node.isActive():
         node.setActive(True)
         # print('activated')
-    if a_type == 'rotation':
-        node.applyTorque(Vec3(*value))
-        print(value)
+    # if a_type == 'rotation':
+    #     node.applyTorque(Vec3(*value))
+    #     print(value)
     elif a_type == 'movement':
         node.applyCentralForce(Vec3(*value))
+    else:
+        raise("not supported")
 
 def join(p1, p2, mobility):
     # t1 = TransformState.makePos(Point3(0, 0, 0))
@@ -93,6 +95,7 @@ def get_box(name, position, rotation=[0, 0, 0], scale=[1, 1, 1], color=[.78, .78
 
     half_scale = [scale[0]/2, scale[1]/2, scale[2]/2]
     model = loader.loadModel('models/box.egg')
+    model.setName(name)
     model.setTextureOff(1)
     model.setScale(*scale)
     model.setColor(*color)
