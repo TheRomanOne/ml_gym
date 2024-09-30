@@ -10,7 +10,6 @@ sys.path.append('/home/roman/Desktop/ML/pipeline')
 
 from Scene.scene import Scene
 import utils
-from Characters.walker import Walker
 from train.gen_algo import GeneticAlgorithm
 
 def apply_drag(body):
@@ -23,7 +22,7 @@ def apply_drag(body):
     body.applyCentralForce(drag_force)
 
 
-
+ga_maximize = False
 class World(ShowBase):
     def __init__(self) -> None:
         ShowBase.__init__(self)
@@ -36,34 +35,26 @@ class World(ShowBase):
         props = WindowProperties()
         # props.setFullscreen(True)
         props.setSize(1920, 1080)  # Set the resolution you want
-
-        # Apply the window properties
         self.win.requestProperties(props)
         
-        # World
-
         taskMgr.add(self.update, 'update')
 
 
-        # self.actors = []
-        # self.models = []
-        # self.world = BulletWorld()
-        # self.world.setGravity(Vec3(0, 0, -2*9.81))
         self.scenes = []
-        self.grid_size = 5
+        self.grid_size = 7
         self.restart_simulation()
         self.add_lighting()
 
         self.epochs = 0
-        self.max_epochs = 250
+        self.max_epochs = 350
         self.mean_scores = []
         self.ga = GeneticAlgorithm(
                 fitness_function=lambda a: a.score,
-                random_genome_value=lambda n: (torch.rand(n) - 0.5) * 2,
-                maximize=True,
-                elitism=.2,
-                mutation=.3,
-                maxPopulationSize=len(self.scenes)
+                random_genome_value=lambda n: (torch.rand(n) - 0.5) * 2.5,
+                maximize=ga_maximize,
+                elitism=.1,
+                mutation=.03,
+                maxPopulationSize=self.grid_size ** 2
             )
 
     def add_lighting(self):
@@ -100,7 +91,7 @@ class World(ShowBase):
         self.world.setDebugNode(debug_np.node())
 
     def restart_simulation(self, new_population=None):
-        
+        self.terminated_agents = 0
         multiplier = 70
         h_grid = self.grid_size / 2
         r = np.linspace(-h_grid, h_grid + 1, self.grid_size)
@@ -116,28 +107,36 @@ class World(ShowBase):
 
         self.epochs = 0
         gc.collect()
-
+        
     def update(self, task):
         dt = globalClock.getDt()
 
-        if self.epochs < self.max_epochs:
+
+        if self.terminated_agents == len(self.scenes) or self.epochs >= self.max_epochs:
+            self.terminated_agents = 0
+            n_parents = max(5, int(len(self.scenes) * .15))
+            sorted_scenes = sorted(self.scenes, key=lambda a: a.score(), reverse=ga_maximize)[:n_parents]
+
+            brains = [utils.flatten_model(s.actor.brain) for s in sorted_scenes]
+            
+            mean_score = np.array([a.score() for a in sorted_scenes]).mean() / self.max_epochs
+            print(f'Generation {len(self.mean_scores)} | {'reward' if ga_maximize else 'loss'} {mean_score}')
+            self.mean_scores.append(mean_score)
+            
+            self.ga.init_population(brains)
+            self.restart_simulation(self.ga.population)
+
+        else:
+            self.terminated_agents = 0
             for scene in self.scenes:
                 scene.advance(dt)
                 scene.evaluate()
+                if scene.actor.terminated:
+                    self.terminated_agents += 1
+                
 
             self.epochs += 1
 
-        else:
-            n_parents = max(5, int(len(self.scenes) * .2))
-            sorted_scenes = sorted(self.scenes, key=lambda a: a.score(), reverse=True)[:n_parents]
-            mean_score = np.array([a.score() for a in sorted_scenes]).mean() / self.max_epochs
-
-            brains = [utils.flatten_model(s.actor.brain) for s in sorted_scenes]
-            self.ga.init_population(brains)
-            print(f'Generation {len(self.mean_scores)} | reward {mean_score}')
-            self.mean_scores.append(mean_score)
-
-            self.restart_simulation(self.ga.population)
 
         return task.cont
     
